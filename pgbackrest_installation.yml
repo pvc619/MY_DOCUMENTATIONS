@@ -1,0 +1,54 @@
+---
+- name: Configure pgBackRest
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Install pgbackrest package
+      ansible.builtin.apt:
+        name: pgbackrest
+        state: present
+        
+    - name: Create log directory
+      ansible.builtin.shell:
+        cmd: mkdir -p -m 770 /var/log/pgbackrest
+      become_user: postgres
+
+    - name: Set ownership for log directory
+      ansible.builtin.shell:
+        cmd: chown postgres:postgres /var/log/
+      become_user: postgres
+
+    - name: Create data directory
+      ansible.builtin.shell:
+        cmd: mkdir -p -m 770 /var/lib/pgbackrest
+      become_user: postgres
+
+    - name: Set ownership for data directory
+      ansible.builtin.shell:
+        cmd: chown postgres:postgres /var/lib/pgbackrest
+      become_user: postgres
+
+    - name: Create configuration directory
+      ansible.builtin.shell:
+        cmd: mkdir -p /etc/pgbackrest/conf.d
+      become_user: postgres
+
+    - name: Create pgbackrest.conf file
+      ansible.builtin.shell:
+        cmd: touch /etc/pgbackrest/pgbackrest.conf
+      become_user: postgres
+
+    - name: Set permissions for pgbackrest.conf
+      ansible.builtin.shell:
+        cmd: chmod 640 /etc/pgbackrest/pgbackrest.conf
+      become_user: postgres
+
+    - name: Set ownership for pgbackrest.conf
+      ansible.builtin.shell:
+        cmd: chown postgres:postgres /etc/pgbackrest/pgbackrest.conf
+      become_user: postgres
+
+    # Add more tasks as needed
+
+# Run the playbook with:
+# ansible-playbook pgbackrest_playbook.yaml
