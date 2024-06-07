@@ -1,7 +1,8 @@
 ---
 - name: Configure pgBackRest
   hosts: localhost
-  become: false
+  connection: local
+
   tasks:
     - name: Install pgbackrest package
       ansible.builtin.apt:
