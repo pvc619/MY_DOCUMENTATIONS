@@ -7,8 +7,15 @@
       shell: |
         services=(nginx apache2 mysql sshd)
         for service in "${services[@]}"; do
-          systemctl is-active $service >/dev/null 2>&1 && status="running" || status="not running"
-          echo "Service $service is $status"
+          if systemctl list-units --full -all | grep -Fq $service; then
+            if systemctl is-active $service >/dev/null 2>&1; then
+              echo -e "\e[32mService $service is running\e[0m"
+            else
+              echo -e "\e[31mService $service is not running\e[0m"
+            fi
+          else
+            echo -e "\e[35mService $service does not exist\e[0m"
+          fi
         done
       register: service_status
 
