@@ -1,0 +1,17 @@
+---
+- name: Check the status of services on all servers
+  hosts: my_servers
+  gather_facts: no
+  tasks:
+    - name: Check status of all services
+      shell: |
+        services=(nginx apache2 mysql sshd)
+        for service in "${services[@]}"; do
+          systemctl is-active $service >/dev/null 2>&1 && status="running" || status="not running"
+          echo "Service $service is $status"
+        done
+      register: service_status
+
+    - name: Print service status
+      debug:
+        msg: "{{ service_status.stdout_lines }}"
