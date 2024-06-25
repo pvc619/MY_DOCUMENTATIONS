@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        .not-reachable {
+            background-color: red;
+            color: white;
+        }
+        .not-running {
+            background-color: yellow;
+        }
+        .does-not-exist {
+            background-color: purple;
+            color: white;
+        }
+        .exists {
+            background-color: green;
+            color: white;
+        }
+        .missing {
+            background-color: orange;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h2>VM, Service, and File Check Report</h2>
+    <table>
+        <tr>
+            <th>Host</th>
+            <th>VM Status</th>
+            <th>Service Status</th>
+            <th>File Status</th>
+        </tr>
+        {% for item in final_report %}
+        <tr>
+            <td>{{ item.host }}</td>
+            <td class="{{ 'not-reachable' if item.vm_status == 'not reachable' else '' }}">{{ item.vm_status }}</td>
+            <td>
+                <ul>
+                    {% for service in item.service_status %}
+                    <li class="{{ 'not-running' if 'not running' in service else 'does-not-exist' if 'does not exist' in service else '' }}">{{ service }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
+            <td>
+                <ul>
+                    {% for file in item.file_status %}
+                    <li class="{{ 'missing' if 'missing' in file else 'exists' }}">{{ file }}</li>
+                    {% endfor %}
+                </ul>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

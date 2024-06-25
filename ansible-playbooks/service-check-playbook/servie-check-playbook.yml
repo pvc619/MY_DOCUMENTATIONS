@@ -1,0 +1,98 @@
+---
+- name: Check the status of VMs, services, and files on all servers
+  hosts: my_servers
+  gather_facts: no
+  vars_files:
+    - secrets.yml
+
+  tasks:
+    - name: Ensure the VM is up and running
+      ping:
+      register: ping_status
+      ignore_errors: yes
+
+    - name: Check the ping status
+      set_fact:
+        vm_status: "{{ ping_status is failed }}"
+
+    - name: Check status of all services
+      shell: |
+        for service in {{ services | join(" ") }}; do
+          if systemctl list-units --full -all | grep -Fq $service; then
+            if systemctl is-active $service >/dev/null 2>&1; then
+              echo "$service: running"
+            else
+              echo "$service: not running"
+            fi
+          else
+            echo "$service: does not exist"
+          fi
+        done
+      register: service_status
+      when: not vm_status
+
+    - name: Check if important files exist
+      shell: |
+        for file in {{ files | join(" ") }}; do
+          if [[ -e $file ]]; then
+            echo "$file: exists"
+          else
+            echo "$file: missing"
+          fi
+        done
+      register: file_status
+      when: not vm_status
+
+    - name: Combine VM, service, and file statuses
+      set_fact:
+        combined_status: >
+          {{
+            {
+              'host': inventory_hostname,
+              'vm_status': 'reachable' if not vm_status else 'not reachable',
+              'service_status': service_status.stdout_lines,
+              'file_status': file_status.stdout_lines
+            }
+          }}
+
+    - name: Save current host status to the final report on localhost
+      add_host:
+        name: localhost
+        combined_status: "{{ combined_status }}"
+      changed_when: false
+
+- name: Generate and send the final report
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Collect all statuses from my_servers
+      set_fact:
+        final_report: "{{ hostvars['localhost']['final_report'] | default([]) }}"
+      run_once: true
+
+    - name: Add combined status of each server to the final report
+      set_fact:
+        final_report: "{{ final_report + [hostvars[item].combined_status] }}"
+      loop: "{{ groups['my_servers'] }}"
+      run_once: true
+
+    - name: Render HTML report on the control node
+      template:
+        src: templates/report_template.j2
+        dest: /tmp/report.html
+      vars:
+        final_report: "{{ final_report }}"
+      run_once: true
+
+    - name: Send email with the report from the control node
+      mail:
+        host: smtp.gmail.com
+        port: 587
+        username: "{{ email_username }}"
+        password: "{{ email_password }}"
+        to: "pvc619@gmail.com"
+        subject: "VM, Service, and File Check Report"
+        body: "{{ lookup('file', '/tmp/report.html') }}"
+        subtype: html
+      when: final_report | length > 0
+      run_once: true
